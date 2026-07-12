@@ -109,7 +109,9 @@ serial_putc:
 clr_scr:
     push eax ecx edi
     mov edi, VM
-    mov ax, 0x0720
+    movzx eax, byte [color_attr+K]
+    mov ah, al
+    mov al, 0x20
     mov ecx, SW*SH
     rep stosw
     mov [cursor_row+K], byte 0
@@ -149,7 +151,9 @@ scroll:
     cld
     rep movsw
     mov edi, VM + (SH-1)*SW*2
-    mov ax, 0x0720
+    movzx eax, byte [color_attr+K]
+    mov ah, al
+    mov al, 0x20
     mov ecx, SW
     rep stosw
     mov [cursor_row+K], byte SH-1
@@ -191,7 +195,10 @@ putc:
     shl eax, 1
     add eax, VM
     mov [eax], cl
-    mov byte [eax+1], 0x07
+    push ecx
+    mov cl, [color_attr+K]
+    mov [eax+1], cl
+    pop ecx
     inc byte [cursor_col+K]
     cmp byte [cursor_col+K], SW
     jb .done
@@ -395,8 +402,12 @@ itoa:
 ; ===== Shell =====
 shell:
 .l:
+    mov al, 0x0A
+    call set_color
     mov esi, msg_prompt+K
     call puts
+    mov al, 0x07
+    call set_color
     mov [cmd_len+K], byte 0
 .read:
     call wait_key
@@ -496,20 +507,63 @@ exec_cmd:
     call cmd_who
     jmp .end
 .n10:
+    mov edi, tok_color+K
+    call strcmp
+    jnz .n12
+    call cmd_color
+    jmp .end
+.n12:
     mov edi, tok_halt+K
     call strcmp
-    jnz .n11
+    jnz .n13
     call cmd_halt
     jmp .end
-.n11:
+.n13:
+    mov al, 0x0C
+    call set_color
     mov esi, msg_unknown+K
     call puts
+    mov al, 0x07
+    call set_color
 .end:
     call nl
     pop edi esi
     ret
 
 ; ===== Command Handlers =====
+cmd_color:
+    mov esi, cmd_buf+K
+    call skip_tok
+    call skip_spc
+    lodsb
+    or al, al
+    jz .usage
+    dec esi
+    call atoi
+    cmp eax, 15
+    ja .usage
+    push eax
+    call skip_spc
+    lodsb
+    or al, al
+    jz .set_fg
+    dec esi
+    call atoi
+    cmp eax, 7
+    ja .usage
+    shl eax, 4
+    pop ecx
+    or eax, ecx
+    push eax
+.set_fg:
+    pop eax
+    mov [color_attr+K], al
+    ret
+.usage:
+    mov esi, msg_color_usage+K
+    call puts
+    ret
+
 cmd_help:
     mov esi, msg_help+K
     call puts
@@ -671,8 +725,12 @@ cmd_who:
     ret
 
 cmd_halt:
+    mov al, 0x0C
+    call set_color
     mov esi, msg_halt+K
     call puts
+    mov al, 0x07
+    call set_color
     cli
 .l:
     hlt
@@ -680,10 +738,34 @@ cmd_halt:
 
 ; ===== Splash =====
 splash:
-    mov esi, msg_splash+K
+    mov al, 0x0B
+    call set_color
+    mov esi, msg_sep+K
     call puts
-    mov esi, msg_splash2+K
+    mov al, 0x0F
+    call set_color
+    mov esi, msg_title+K
     call puts
+    mov al, 0x02
+    call set_color
+    mov esi, msg_kernel+K
+    call puts
+    mov al, 0x0E
+    call set_color
+    mov esi, msg_not+K
+    call puts
+    mov al, 0x0B
+    call set_color
+    mov esi, msg_sep+K
+    call puts
+    mov al, 0x07
+    call set_color
+    mov esi, msg_help_txt+K
+    call puts
+    ret
+
+set_color:
+    mov [color_attr+K], al
     ret
 
 serial_puts:
@@ -703,6 +785,7 @@ align 4
 cursor_row db 0
 cursor_col db 0
 shift_f db 0
+color_attr db 0x07
 cmd_len db 0
 cmd_buf rb 256
 num_buf rb 16
@@ -743,15 +826,14 @@ db "    invoke  ", 0, 0, 0, 0
 dd 0
 
 ; --- Strings ---
-msg_splash db "========================================", LF, 0
-msg_splash2 db "       A E V U M   O S   v0.1", LF
-db "   Capability-Based Fractal Kernel", LF
-db "      Not Unix  /  Not DOS", LF
-db "========================================", LF
-db "     Type 'help' for commands", LF, 0
+msg_sep db "========================================", LF, 0
+msg_title db "       A E V U M   O S   v0.1.1", LF, 0
+msg_kernel db "   Capability-Based Fractal Kernel", LF, 0
+msg_not db "      Not Unix  /  Not DOS", LF, 0
+msg_help_txt db "     Type 'help' for commands", LF, 0
 
 msg_info db "=== Aevum OS ===", LF
-db "Version: 0.1 (Pre-Alpha)", LF
+db "Version: 0.1.1 (Pre-Alpha)", LF
 db "Kernel: Capability-Based Fractal", LF
 db "IPC: Message-Oriented via Capabilities", LF
 db "Process Model: Task Hierarchy", LF
@@ -760,6 +842,7 @@ db "Not Unix-compatible. Not DOS-compatible.", LF
 db "Unique architecture.", LF, 0
 
 msg_help db "Commands:", LF
+db "  color     - set text color", LF
 db "  help      - this help", LF
 db "  info      - system info", LF
 db "  caps      - list capabilities", LF
@@ -774,7 +857,7 @@ db "  halt      - halt system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
-msg_ver db "Aevum OS version 0.1", 0
+msg_ver db "Aevum OS version 0.1.1", 0
 msg_who db "guest@aevum (capability level: user)", 0
 msg_caps_hdr db "Capabilities:", LF, 0
 msg_no_cap db "Capability not found", 0
@@ -785,7 +868,9 @@ msg_calc_usage db "Usage: calc <a> <op> <b>", 0
 msg_bad_op db "Bad operator. Use + - * /", 0
 msg_div0 db "Division by zero", 0
 msg_halt db "System halted.", 0
+msg_color_usage db "Usage: color <fg> [bg]  (fg:0-15, bg:0-7)", 0
 
+tok_color db "color", 0
 tok_help db "help", 0
 tok_info db "info", 0
 tok_caps db "caps", 0

@@ -123,7 +123,7 @@ aevum$ help
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1 (Pre-Alpha)
+Version: 0.1.1 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -182,6 +182,14 @@ aevum$ calc 7 * 6
 42
 ```
 
+### `color <fg> [bg]`
+Установить цвет текста. Цвет символов 0–15, фон 0–7.
+
+```
+aevum$ color 2
+aevum$ color 15 1
+```
+
 ### `clear`
 Очистить экран.
 
@@ -190,7 +198,7 @@ aevum$ calc 7 * 6
 
 ```
 aevum$ version
-Aevum OS version 0.1
+Aevum OS version 0.1.1
 ```
 
 ### `whoami`
@@ -401,12 +409,17 @@ flat-сегментацию (DS base = 0, а данные лежат по адр
 
 ## История версий
 
+**v0.1.1 (Pre-Alpha)**
+- Поддержка цветов (VGA text attributes, команда `color`)
+- Цветной экран приветствия (splash)
+- 12 команд: color, help, info, caps, invoke, tasks, echo, calc, clear, version, whoami, halt
+
 **v0.1 (Pre-Alpha)**
 - Загрузка с BIOS, переход в protected mode
 - VGA text mode 80×25
 - Polling-клавиатура (US layout)
 - Shell с capability-based архитектурой
-- 11 команд: help, info, caps, invoke, tasks, echo, calc, clear, version, whoami, halt
+- 11 команд
 - Отладка через COM1 (serial port)
 
 ---
