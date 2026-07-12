@@ -68,6 +68,7 @@ pm_entry:
     call serial_init
     call clr_scr
     call splash
+
     call shell
 
 ; ===== Serial Debug =====
@@ -954,40 +955,58 @@ ata_read_sector:
     add dl, 2
     mov al, 1
     out dx, al
-    add dl, 1
+    inc dx
     mov eax, edi
     out dx, al
-    add dl, 1
+    inc dx
     shr eax, 8
     out dx, al
-    add dl, 1
+    inc dx
     shr eax, 8
     out dx, al
-    add dl, 1
+    inc dx
     shr eax, 8
     and al, 0x0F
-    or al, 0xA0
+    or al, 0xE0
     test cl, 1
     jz .rdrv
     or al, 0x10
 .rdrv:
     out dx, al
-    add dl, 1
+    inc dx
+    mov cx, 0xFFFF
+.rwait:
+    in al, 0x80
+    in al, dx
+    test al, 0x80
+    jz .rgo
+    dec cx
+    jnz .rwait
+    jmp .rfail
+.rgo:
     mov al, 0x20
     out dx, al
-    mov ecx, 10000
+    mov cx, 0xFFFF
 .rpoll:
     in al, dx
     test al, 0x80
+    jz .rrdy
+    dec cx
     jnz .rpoll
+    jmp .rfail
+.rrdy:
     test al, 1
     jnz .rfail
     test al, 0x08
     jz .rfail
     pop dx
     mov edi, ata_buf+K
-    mov ecx, 256
-    rep insw
+    mov cx, 256
+.rw2:
+    in ax, dx
+    stosw
+    dec cx
+    jnz .rw2
     mov eax, 1
     pop edi edx ecx
     ret
@@ -1010,52 +1029,72 @@ ata_write_sector:
     add dl, 2
     mov al, 1
     out dx, al
-    add dl, 1
+    inc dx
     mov eax, ebx
     out dx, al
-    add dl, 1
+    inc dx
     shr eax, 8
     out dx, al
-    add dl, 1
+    inc dx
     shr eax, 8
     out dx, al
-    add dl, 1
+    inc dx
     shr eax, 8
     and al, 0x0F
-    or al, 0xA0
+    or al, 0xE0
     test cl, 1
     jz .wdrv
     or al, 0x10
 .wdrv:
     out dx, al
-    add dl, 1
+    inc dx
+    mov cx, 0xFFFF
+.wwait:
+    in al, 0x80
+    in al, dx
+    test al, 0x80
+    jz .wgo
+    dec cx
+    jnz .wwait
+    jmp .wfail
+.wgo:
     mov al, 0x30
     out dx, al
-    mov ecx, 10000
+    mov cx, 0xFFFF
 .wpoll:
     in al, dx
     test al, 0x80
+    jz .wrdy
+    dec cx
     jnz .wpoll
+    jmp .wfail
+.wrdy:
     test al, 1
     jnz .wfail
     test al, 0x08
     jz .wfail
     pop dx
-    mov ecx, 256
-    rep outsw
+    mov cx, 256
+.ww2:
+    lodsw
+    out dx, ax
+    dec cx
+    jnz .ww2
+    push dx
     add dl, 7
-    mov ecx, 10000
+    mov cx, 0xFFFF
 .wbusy:
     in al, dx
     test al, 0x80
+    jz .wrdy2
+    dec cx
     jnz .wbusy
+    jmp .wfail
+.wrdy2:
     test al, 1
-    jnz .werr
+    jnz .wfail
+    pop dx
     mov eax, 1
-    pop edx ecx
-    ret
-.werr:
-    xor eax, eax
     pop edx ecx
     ret
 .wfail:
@@ -1198,18 +1237,23 @@ sys_install_handler:
     call puts
     mov esi, msg_colon+K
     call puts
-    xor eax, eax
-    xor ebx, ebx
-    call ata_read_sector
-    or eax, eax
-    jz .fail
+
     pop eax
     push eax
     xor ebx, ebx
+    mov esi, 0x7C00
+    mov edi, ata_buf+K
+    mov ecx, 128
+    rep movsd
     mov esi, ata_buf+K
     call ata_write_sector
     or eax, eax
-    jz .fail
+    jnz .wr_ok
+    pop eax
+    mov esi, msg_install_fail+K
+    call puts
+    ret
+.wr_ok:
     pop eax
     push eax
     mov ebx, 1
@@ -1219,23 +1263,18 @@ sys_install_handler:
     mov esi, edx
     call ata_write_sector
     or eax, eax
-    jz .fail2
+    jnz .kr_ok
+    pop eax
+    mov esi, msg_install_fail+K
+    call puts
+    ret
+.kr_ok:
     add edx, 512
     inc ebx
     dec ecx
     jnz .kloop
     pop eax
     mov esi, msg_install_done+K
-    call puts
-    ret
-.fail2:
-    pop eax
-    mov esi, msg_install_fail+K
-    call puts
-    ret
-.fail:
-    pop eax
-    mov esi, msg_install_fail+K
     call puts
     ret
 .usage:
@@ -1382,14 +1421,14 @@ dd 0
 
 ; --- Strings ---
 msg_sep db "========================================", LF, 0
-msg_title db "       A E V U M   O S   v0.1.2.3", LF
+msg_title db "       A E V U M   O S   v0.1.3.0", LF
 db "            (Pre-Alpha)", LF, 0
 msg_kernel db "   Capability-Based Fractal Kernel", LF, 0
 msg_not db "      Not Unix  /  Not DOS", LF, 0
 msg_help_txt db "     Type 'help' for commands", LF, 0
 
 msg_info db "=== Aevum OS ===", LF
-db "Version: 0.1.2.3 (Pre-Alpha)", LF
+db "Version: 0.1.2.4 (Pre-Alpha)", LF
 db "Kernel: Capability-Based Fractal", LF
 db "IPC: Message-Oriented via Capabilities", LF
 db "Process Model: Task Hierarchy", LF
@@ -1413,7 +1452,7 @@ db "  halt      - halt system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
-msg_ver db "Aevum OS version 0.1.2.3", 0
+msg_ver db "Aevum OS version 0.1.2.4", 0
 msg_who db "guest@aevum (capability level: user)", 0
 msg_caps_hdr db "Capabilities:", LF, 0
 msg_no_cap db "Capability not found", 0
@@ -1460,6 +1499,7 @@ msg_size_gb db " GB)", 0
 msg_size_mb db " MB)", 0
 msg_disk_info_usage db "Usage: invoke disk.info [master|slave]", 0
 msg_sys_install_usage db "Usage: invoke sys.install [master|slave|0-3]", 0
+msg_auto_disk db "invoke disk.list", 0
 msg_install_to db "Installing to drive ", 0
 msg_colon db "...", LF, 0
 msg_install_done db "Install complete!", LF, 0
@@ -1497,7 +1537,7 @@ dd entry3_data - archive_start
 archive_entries_end:
 
 entry0_data:
-  db "Aevum OS v0.1.2.3", LF
+  db "Aevum OS v0.1.3.0", LF
   db "Capability-Based Fractal Kernel", LF
   db "Not Unix. Not DOS.", 0
 entry0_end:
