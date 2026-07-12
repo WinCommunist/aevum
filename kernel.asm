@@ -850,10 +850,21 @@ arc_info_handler:
 ata_identify:
     push edx ecx edi
     mov edi, ata_buf+K
-    mov dx, 0x1F6
+    mov ecx, eax
+    mov dx, 0x1F0
+    test al, 2
+    jz .sel
+    mov dx, 0x170
+.sel:
+    push dx
+    add dx, 6
     mov al, 0xA0
+    test cl, 1
+    jz .drv
+    or al, 0x10
+.drv:
     out dx, al
-    mov dx, 0x1F7
+    inc dx
     mov ecx, 10000
 .busy:
     in al, dx
@@ -865,10 +876,8 @@ ata_identify:
 .ready:
     cmp al, 0xFF
     je .no
-    mov dx, 0x1F7
     mov al, 0xEC
     out dx, al
-    mov dx, 0x1F7
     mov ecx, 10000
 .poll:
     in al, dx
@@ -878,15 +887,41 @@ ata_identify:
     jnz .no
     test al, 0x08
     jz .no
-    mov dx, 0x1F0
+    pop dx
     mov ecx, 256
     rep insw
     mov eax, 1
     pop edi ecx edx
     ret
 .no:
+    pop dx
     xor eax, eax
     pop edi ecx edx
+    ret
+
+ata_print_size:
+    push eax edx ecx
+    mov eax, dword [ata_buf+K + 120]
+    cmp eax, 2097152
+    jb .show_mb
+    xor edx, edx
+    mov ecx, 2097152
+    div ecx
+    call itoa
+    call puts
+    mov esi, msg_size_gb+K
+    call puts
+    pop ecx edx eax
+    ret
+.show_mb:
+    xor edx, edx
+    mov ecx, 2048
+    div ecx
+    call itoa
+    call puts
+    mov esi, msg_size_mb+K
+    call puts
+    pop ecx edx eax
     ret
 
 ata_copy_model:
@@ -905,38 +940,45 @@ ata_copy_model:
     ret
 
 ; ===== Disk Capability Handlers =====
+disk_show_drive:
+    push eax
+    call ata_identify
+    or eax, eax
+    jz .no
+    call ata_copy_model
+    mov esi, ata_model+K
+    call puts
+    mov esi, msg_size_sep+K
+    call puts
+    call ata_print_size
+    call nl
+    pop eax
+    ret
+.no:
+    mov esi, msg_disk_no+K
+    call puts
+    pop eax
+    ret
+
 disk_list_handler:
     mov esi, msg_disk_hdr+K
     call puts
     mov esi, msg_disk_pri_m+K
     call puts
     xor eax, eax
-    call ata_identify
-    or eax, eax
-    jz .nom
-    call ata_copy_model
-    mov esi, ata_model+K
-    call puts
-    call nl
-    jmp .slv
-.nom:
-    mov esi, msg_disk_no+K
-    call puts
-.slv:
+    call disk_show_drive
     mov esi, msg_disk_pri_s+K
     call puts
     mov eax, 1
-    call ata_identify
-    or eax, eax
-    jz .nos
-    call ata_copy_model
-    mov esi, ata_model+K
+    call disk_show_drive
+    mov esi, msg_disk_sec_m+K
     call puts
-    call nl
-    ret
-.nos:
-    mov esi, msg_disk_no+K
+    mov eax, 2
+    call disk_show_drive
+    mov esi, msg_disk_sec_s+K
     call puts
+    mov eax, 3
+    call disk_show_drive
     ret
 
 disk_info_handler:
@@ -953,47 +995,31 @@ disk_info_handler:
     mov edi, tok_disk_mst+K
     call strcmp
     or eax, eax
-    jz .master
+    jz .drive0
     pop esi
     push esi
     mov edi, tok_disk_slv+K
     call strcmp
     or eax, eax
-    jz .slave
+    jz .drive1
     pop esi
     jmp .usage
-.master:
+.drive0:
     pop esi
-    xor eax, eax
-    call ata_identify
-    or eax, eax
-    jz .nf
     mov esi, msg_disk_pri_m+K
     call puts
-    call ata_copy_model
-    mov esi, ata_model+K
-    call puts
-    call nl
+    xor eax, eax
+    call disk_show_drive
     ret
-.slave:
+.drive1:
     pop esi
-    mov eax, 1
-    call ata_identify
-    or eax, eax
-    jz .nf
     mov esi, msg_disk_pri_s+K
     call puts
-    call ata_copy_model
-    mov esi, ata_model+K
-    call puts
-    call nl
+    mov eax, 1
+    call disk_show_drive
     ret
 .all:
     call disk_list_handler
-    ret
-.nf:
-    mov esi, msg_disk_no+K
-    call puts
     ret
 .usage:
     mov esi, msg_disk_info_usage+K
@@ -1137,14 +1163,14 @@ dd 0
 
 ; --- Strings ---
 msg_sep db "========================================", LF, 0
-msg_title db "       A E V U M   O S   v0.1.2.1", LF
+msg_title db "       A E V U M   O S   v0.1.2.2", LF
 db "            (Pre-Alpha)", LF, 0
 msg_kernel db "   Capability-Based Fractal Kernel", LF, 0
 msg_not db "      Not Unix  /  Not DOS", LF, 0
 msg_help_txt db "     Type 'help' for commands", LF, 0
 
 msg_info db "=== Aevum OS ===", LF
-db "Version: 0.1.2.1 (Pre-Alpha)", LF
+db "Version: 0.1.2.2 (Pre-Alpha)", LF
 db "Kernel: Capability-Based Fractal", LF
 db "IPC: Message-Oriented via Capabilities", LF
 db "Process Model: Task Hierarchy", LF
@@ -1168,7 +1194,7 @@ db "  halt      - halt system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
-msg_ver db "Aevum OS version 0.1.2.1", 0
+msg_ver db "Aevum OS version 0.1.2.2", 0
 msg_who db "guest@aevum (capability level: user)", 0
 msg_caps_hdr db "Capabilities:", LF, 0
 msg_no_cap db "Capability not found", 0
@@ -1207,7 +1233,12 @@ msg_arc_info_usage db "Usage: invoke arc.info <name>", 0
 msg_disk_hdr db "Disks:", LF, 0
 msg_disk_pri_m db "  Primary Master: ", 0
 msg_disk_pri_s db "  Primary Slave: ", 0
+msg_disk_sec_m db "  Secondary Master: ", 0
+msg_disk_sec_s db "  Secondary Slave: ", 0
 msg_disk_no db "(not present)", LF, 0
+msg_size_sep db " (", 0
+msg_size_gb db " GB)", 0
+msg_size_mb db " MB)", 0
 msg_disk_info_usage db "Usage: invoke disk.info [master|slave]", 0
 tok_disk_mst db "master", 0
 tok_disk_slv db "slave", 0
@@ -1242,7 +1273,7 @@ dd entry3_data - archive_start
 archive_entries_end:
 
 entry0_data:
-  db "Aevum OS v0.1.2.1", LF
+  db "Aevum OS v0.1.2.2", LF
   db "Capability-Based Fractal Kernel", LF
   db "Not Unix. Not DOS.", 0
 entry0_end:

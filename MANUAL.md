@@ -127,7 +127,7 @@ System information: version, architecture, kernel type.
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.2.1 (Pre-Alpha)
+Version: 0.1.2.2 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
