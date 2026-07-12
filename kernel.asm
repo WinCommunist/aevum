@@ -375,16 +375,21 @@ atoi:
     ret
 
 itoa:
-    push eax ebx edx
+    push eax ebx edx ecx
     mov edi, num_buf+K+15
     mov byte [edi], 0
     dec edi
     mov ebx, 10
+    xor ecx, ecx
     test eax, eax
-    jnz .l
+    jnz .chk_sign
     mov byte [edi], '0'
     dec edi
     jmp .d
+.chk_sign:
+    jns .l
+    inc ecx
+    neg eax
 .l:
     xor edx, edx
     div ebx
@@ -393,10 +398,14 @@ itoa:
     dec edi
     or eax, eax
     jnz .l
+    test ecx, ecx
+    jz .d
+    mov byte [edi], '-'
+    dec edi
 .d:
     inc edi
     mov esi, edi
-    pop edx ebx eax
+    pop ecx edx ebx eax
     ret
 
 ; ===== Shell =====
