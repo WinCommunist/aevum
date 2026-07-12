@@ -955,9 +955,9 @@ dd cap1_name+K, 0
 dd cap2_name+K, 0
 dd cap3_name+K, 0
 dd cap4_name+K, 0
-dd cap5_name+K, arc_list_handler
-dd cap6_name+K, arc_read_handler
-dd cap7_name+K, arc_info_handler
+dd cap5_name+K, arc_list_handler+K
+dd cap6_name+K, arc_read_handler+K
+dd cap7_name+K, arc_info_handler+K
 dd 0
 
 cap1_name db "console", 0
