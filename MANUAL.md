@@ -122,7 +122,7 @@ System information: version, architecture, kernel type.
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.1 (Pre-Alpha)
+Version: 0.1.2 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -197,7 +197,7 @@ Show version.
 
 ```
 aevum$ version
-Aevum OS version 0.1.1
+Aevum OS version 0.1.2
 ```
 
 ### `whoami`
@@ -409,10 +409,15 @@ All data accesses use `+K` to compensate for flat segmentation
 
 ## Version History
 
+**v0.1.2 (Pre-Alpha)**
+- Fixed: `color` command no longer crashes with fg > 7 or bg > 7
+- Fixed: `color` command now persists across commands (no longer reset by prompt)
+- Signed number output in `calc` (negative results display correctly)
+- 12 commands: color, help, info, caps, invoke, tasks, echo, calc, clear, version, whoami, halt
+
 **v0.1.1 (Pre-Alpha)**
 - Color support (VGA text attributes, `color` command)
 - Updated splash screen with colors
-- 12 commands: color, help, info, caps, invoke, tasks, echo, calc, clear, version, whoami, halt
 
 **v0.1 (Pre-Alpha)**
 - BIOS boot, protected mode switch

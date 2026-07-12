@@ -411,11 +411,12 @@ itoa:
 ; ===== Shell =====
 shell:
 .l:
+    push eax
     mov al, 0x0A
     call set_color
     mov esi, msg_prompt+K
     call puts
-    mov al, 0x07
+    pop eax
     call set_color
     mov [cmd_len+K], byte 0
 .read:
@@ -551,23 +552,26 @@ cmd_color:
     call atoi
     cmp eax, 15
     ja .usage
-    push eax
+    movzx ecx, al
     call skip_spc
     lodsb
     or al, al
     jz .set_fg
     dec esi
+    push ecx
     call atoi
     cmp eax, 7
-    ja .usage
+    ja .usage_pop
     shl eax, 4
     pop ecx
     or eax, ecx
-    push eax
-.set_fg:
-    pop eax
     mov [color_attr+K], al
     ret
+.set_fg:
+    mov [color_attr+K], cl
+    ret
+.usage_pop:
+    pop ecx
 .usage:
     mov esi, msg_color_usage+K
     call puts
@@ -836,13 +840,14 @@ dd 0
 
 ; --- Strings ---
 msg_sep db "========================================", LF, 0
-msg_title db "       A E V U M   O S   v0.1.1", LF, 0
+msg_title db "       A E V U M   O S   v0.1.2", LF
+db "            (Pre-Alpha)", LF, 0
 msg_kernel db "   Capability-Based Fractal Kernel", LF, 0
 msg_not db "      Not Unix  /  Not DOS", LF, 0
 msg_help_txt db "     Type 'help' for commands", LF, 0
 
 msg_info db "=== Aevum OS ===", LF
-db "Version: 0.1.1 (Pre-Alpha)", LF
+db "Version: 0.1.2 (Pre-Alpha)", LF
 db "Kernel: Capability-Based Fractal", LF
 db "IPC: Message-Oriented via Capabilities", LF
 db "Process Model: Task Hierarchy", LF
@@ -866,7 +871,7 @@ db "  halt      - halt system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
-msg_ver db "Aevum OS version 0.1.1", 0
+msg_ver db "Aevum OS version 0.1.2", 0
 msg_who db "guest@aevum (capability level: user)", 0
 msg_caps_hdr db "Capabilities:", LF, 0
 msg_no_cap db "Capability not found", 0
