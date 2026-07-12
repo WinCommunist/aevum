@@ -99,8 +99,10 @@ Built-in system capabilities:
 | `arc.list`  | List archive entries                       |
 | `arc.read`  | Read an archive entry by name              |
 | `arc.info`  | Show info about an archive entry           |
+| `disk.list` | List ATA drives                            |
+| `disk.info` | Show ATA drive info (master/slave or all)  |
 
-The `invoke <name>` command activates a capability. Some capabilities (like `arc.read`, `arc.info`) accept an argument: `invoke arc.read about`.
+The `invoke <name>` command activates a capability. Some capabilities accept an argument: `invoke arc.read about`, `invoke disk.info master`.
 
 ### Message-Oriented IPC
 

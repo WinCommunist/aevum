@@ -846,6 +846,160 @@ arc_info_handler:
     call puts
     ret
 
+; ===== ATA Driver =====
+ata_identify:
+    push edx ecx edi
+    mov edi, ata_buf+K
+    mov dx, 0x1F6
+    mov al, 0xA0
+    out dx, al
+    mov dx, 0x1F7
+    mov ecx, 10000
+.busy:
+    in al, dx
+    test al, 0x80
+    jz .ready
+    dec ecx
+    jnz .busy
+    jmp .no
+.ready:
+    cmp al, 0xFF
+    je .no
+    mov dx, 0x1F7
+    mov al, 0xEC
+    out dx, al
+    mov dx, 0x1F7
+    mov ecx, 10000
+.poll:
+    in al, dx
+    test al, 0x80
+    jnz .poll
+    test al, 1
+    jnz .no
+    test al, 0x08
+    jz .no
+    mov dx, 0x1F0
+    mov ecx, 256
+    rep insw
+    mov eax, 1
+    pop edi ecx edx
+    ret
+.no:
+    xor eax, eax
+    pop edi ecx edx
+    ret
+
+ata_copy_model:
+    push edi ecx
+    mov esi, ata_buf+K + 54
+    mov edi, ata_model+K
+    mov ecx, 20
+.l:
+    lodsw
+    xchg al, ah
+    stosw
+    dec ecx
+    jnz .l
+    mov byte [edi], 0
+    pop ecx edi
+    ret
+
+; ===== Disk Capability Handlers =====
+disk_list_handler:
+    mov esi, msg_disk_hdr+K
+    call puts
+    mov esi, msg_disk_pri_m+K
+    call puts
+    xor eax, eax
+    call ata_identify
+    or eax, eax
+    jz .nom
+    call ata_copy_model
+    mov esi, ata_model+K
+    call puts
+    call nl
+    jmp .slv
+.nom:
+    mov esi, msg_disk_no+K
+    call puts
+.slv:
+    mov esi, msg_disk_pri_s+K
+    call puts
+    mov eax, 1
+    call ata_identify
+    or eax, eax
+    jz .nos
+    call ata_copy_model
+    mov esi, ata_model+K
+    call puts
+    call nl
+    ret
+.nos:
+    mov esi, msg_disk_no+K
+    call puts
+    ret
+
+disk_info_handler:
+    mov esi, cmd_buf+K
+    call skip_tok
+    call skip_spc
+    call skip_tok
+    call skip_spc
+    lodsb
+    or al, al
+    jz .all
+    dec esi
+    push esi
+    mov edi, tok_disk_mst+K
+    call strcmp
+    or eax, eax
+    jz .master
+    pop esi
+    push esi
+    mov edi, tok_disk_slv+K
+    call strcmp
+    or eax, eax
+    jz .slave
+    pop esi
+    jmp .usage
+.master:
+    pop esi
+    xor eax, eax
+    call ata_identify
+    or eax, eax
+    jz .nf
+    mov esi, msg_disk_pri_m+K
+    call puts
+    call ata_copy_model
+    mov esi, ata_model+K
+    call puts
+    call nl
+    ret
+.slave:
+    pop esi
+    mov eax, 1
+    call ata_identify
+    or eax, eax
+    jz .nf
+    mov esi, msg_disk_pri_s+K
+    call puts
+    call ata_copy_model
+    mov esi, ata_model+K
+    call puts
+    call nl
+    ret
+.all:
+    call disk_list_handler
+    ret
+.nf:
+    mov esi, msg_disk_no+K
+    call puts
+    ret
+.usage:
+    mov esi, msg_disk_info_usage+K
+    call puts
+    ret
+
 ; ===== Splash =====
 splash:
     mov al, 0x0B
@@ -933,6 +1087,8 @@ cmd_len db 0
 cmd_buf rb 256
 num_buf rb 16
 archive_ptr dd K + archive_start
+ata_buf rb 512
+ata_model rb 41
 
 ; --- Scancode Tables (US layout) ---
 sc_norm:
@@ -958,6 +1114,8 @@ dd cap4_name+K, 0
 dd cap5_name+K, arc_list_handler+K
 dd cap6_name+K, arc_read_handler+K
 dd cap7_name+K, arc_info_handler+K
+dd cap8_name+K, disk_list_handler+K
+dd cap9_name+K, disk_info_handler+K
 dd 0
 
 cap1_name db "console", 0
@@ -967,6 +1125,8 @@ cap4_name db "task.list", 0
 cap5_name db "arc.list", 0
 cap6_name db "arc.read", 0
 cap7_name db "arc.info", 0
+cap8_name db "disk.list", 0
+cap9_name db "disk.info", 0
 
 ; --- Task Table ---
 task_list:
@@ -1042,6 +1202,15 @@ msg_arc_read_usage db "Usage: invoke arc.read <name>", 0
 msg_arc_info_hdr db "Entry info:", LF, 0
 msg_arc_size db "Size: ", 0
 msg_arc_info_usage db "Usage: invoke arc.info <name>", 0
+
+; --- Disk Strings ---
+msg_disk_hdr db "Disks:", LF, 0
+msg_disk_pri_m db "  Primary Master: ", 0
+msg_disk_pri_s db "  Primary Slave: ", 0
+msg_disk_no db "(not present)", LF, 0
+msg_disk_info_usage db "Usage: invoke disk.info [master|slave]", 0
+tok_disk_mst db "master", 0
+tok_disk_slv db "slave", 0
 
 ; --- Archive Data (AARC format) ---
 archive_start:

@@ -100,8 +100,10 @@ root ─┬─ shell ─┬─ invoke
 | `arc.list`  | Список записей архива |
 | `arc.read`  | Чтение записи архива по имени |
 | `arc.info`  | Информация о записи архива |
+| `disk.list` | Список ATA-дисков |
+| `disk.info` | Информация об ATA-диске (master/slave или всё) |
 
-Команда `invoke <имя>` активирует возможность. Некоторые возможности (например, `arc.read`, `arc.info`) принимают аргумент: `invoke arc.read about`.
+Команда `invoke <имя>` активирует возможность. Некоторые возможности принимают аргумент: `invoke arc.read about`, `invoke disk.info master`.
 
 ### Message-Oriented IPC
 

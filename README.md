@@ -30,7 +30,7 @@ chmod +x build.sh run.sh
 ./run.sh
 ```
 
-This produces `aevum.img` — a bootable floppy image with a 512-byte bootloader and an 8 KB kernel. The kernel boots into protected mode, initializes VGA text mode (80×25), a polling keyboard driver, and a shell with 12 commands. Includes an in-memory archive with entries accessible via capabilities (`arc.list`, `arc.read`, `arc.info`).
+This produces `aevum.img` — a bootable floppy image with a 512-byte bootloader and an 8 KB kernel. The kernel boots into protected mode, initializes VGA text mode (80×25), a polling keyboard driver, and a shell with 12 commands. Includes an in-memory archive with entries accessible via capabilities (`arc.list`, `arc.read`, `arc.info`). Includes ATA driver for disk detection (`disk.list`, `disk.info`).
 
 ---
 
@@ -83,7 +83,7 @@ chmod +x build.sh run.sh
 ./run.sh
 ```
 
-Результат — `aevum.img`: загрузочный образ дискеты с загрузчиком (512 байт) и ядром (8 КБ). Ядро загружается в защищённый режим, инициализирует VGA text mode (80×25), клавиатуру (опрос) и оболочку с 12 командами. Включает архив в памяти с записями, доступными через возможности (`arc.list`, `arc.read`, `arc.info`).
+Результат — `aevum.img`: загрузочный образ дискеты с загрузчиком (512 байт) и ядром (8 КБ). Ядро загружается в защищённый режим, инициализирует VGA text mode (80×25), клавиатуру (опрос) и оболочку с 12 командами. Включает архив в памяти с записями, доступными через возможности (`arc.list`, `arc.read`, `arc.info`). Включает ATA-драйвер для обнаружения дисков (`disk.list`, `disk.info`).
 
 ---
 
