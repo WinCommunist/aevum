@@ -122,7 +122,7 @@ System information: version, architecture, kernel type.
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.2 (Pre-Alpha)
+Version: 0.1.2.1 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -188,6 +188,18 @@ Set text color. Foreground 0–15, background 0–7.
 aevum$ color 2
 aevum$ color 15 1
 ```
+
+### `run <name>`
+Run an embedded program by name.
+
+```
+aevum$ run hello
+Running program...
+Hello from Aevum!
+Program exited.
+```
+
+Currently ships with `hello` — a demo program that prints to VGA directly.
 
 ### `clear`
 Clear the screen.
@@ -409,11 +421,20 @@ All data accesses use `+K` to compensate for flat segmentation
 
 ## Version History
 
+**v0.1.2.1 (Pre-Alpha)**
+- AEX program format (Aevum Executable): magic `AEX`, 12-byte header
+- Embedded "hello" program (built into kernel)
+- `run <name>` command to execute programs
+- Programs copied to 0x30000 and executed in ring 0
+- 13 commands
+
 **v0.1.2 (Pre-Alpha)**
 - Fixed: `color` command no longer crashes with fg > 7 or bg > 7
 - Fixed: `color` command now persists across commands (no longer reset by prompt)
+- Fixed: prompt preserves user background color
+- Fixed: errors/halt restore user color instead of hardcoded 0x07
 - Signed number output in `calc` (negative results display correctly)
-- 12 commands: color, help, info, caps, invoke, tasks, echo, calc, clear, version, whoami, halt
+- 12 commands
 
 **v0.1.1 (Pre-Alpha)**
 - Color support (VGA text attributes, `color` command)
