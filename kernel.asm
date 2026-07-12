@@ -939,6 +939,131 @@ ata_copy_model:
     pop ecx edi
     ret
 
+; ===== ATA PIO Read/Write =====
+; eax = drive (0-3), ebx = LBA, reads one sector into ata_buf, returns eax = 1/0
+ata_read_sector:
+    push ecx edx edi
+    mov ecx, eax
+    mov edi, ebx
+    mov dx, 0x1F0
+    test cl, 2
+    jz .rsel
+    mov dx, 0x170
+.rsel:
+    push dx
+    add dl, 2
+    mov al, 1
+    out dx, al
+    add dl, 1
+    mov eax, edi
+    out dx, al
+    add dl, 1
+    shr eax, 8
+    out dx, al
+    add dl, 1
+    shr eax, 8
+    out dx, al
+    add dl, 1
+    shr eax, 8
+    and al, 0x0F
+    or al, 0xA0
+    test cl, 1
+    jz .rdrv
+    or al, 0x10
+.rdrv:
+    out dx, al
+    add dl, 1
+    mov al, 0x20
+    out dx, al
+    mov ecx, 10000
+.rpoll:
+    in al, dx
+    test al, 0x80
+    jnz .rpoll
+    test al, 1
+    jnz .rfail
+    test al, 0x08
+    jz .rfail
+    pop dx
+    mov edi, ata_buf+K
+    mov ecx, 256
+    rep insw
+    mov eax, 1
+    pop edi edx ecx
+    ret
+.rfail:
+    pop dx
+    xor eax, eax
+    pop edi edx ecx
+    ret
+
+; eax = drive (0-3), ebx = LBA, esi = data buffer (512 bytes), returns eax = 1/0
+ata_write_sector:
+    push ecx edx
+    mov ecx, eax
+    mov dx, 0x1F0
+    test cl, 2
+    jz .wsel
+    mov dx, 0x170
+.wsel:
+    push dx
+    add dl, 2
+    mov al, 1
+    out dx, al
+    add dl, 1
+    mov eax, ebx
+    out dx, al
+    add dl, 1
+    shr eax, 8
+    out dx, al
+    add dl, 1
+    shr eax, 8
+    out dx, al
+    add dl, 1
+    shr eax, 8
+    and al, 0x0F
+    or al, 0xA0
+    test cl, 1
+    jz .wdrv
+    or al, 0x10
+.wdrv:
+    out dx, al
+    add dl, 1
+    mov al, 0x30
+    out dx, al
+    mov ecx, 10000
+.wpoll:
+    in al, dx
+    test al, 0x80
+    jnz .wpoll
+    test al, 1
+    jnz .wfail
+    test al, 0x08
+    jz .wfail
+    pop dx
+    mov ecx, 256
+    rep outsw
+    add dl, 7
+    mov ecx, 10000
+.wbusy:
+    in al, dx
+    test al, 0x80
+    jnz .wbusy
+    test al, 1
+    jnz .werr
+    mov eax, 1
+    pop edx ecx
+    ret
+.werr:
+    xor eax, eax
+    pop edx ecx
+    ret
+.wfail:
+    pop dx
+    xor eax, eax
+    pop edx ecx
+    ret
+
 ; ===== Disk Capability Handlers =====
 disk_show_drive:
     push eax
@@ -1023,6 +1148,98 @@ disk_info_handler:
     ret
 .usage:
     mov esi, msg_disk_info_usage+K
+    call puts
+    ret
+
+; ===== System Install =====
+sys_install_handler:
+    mov esi, cmd_buf+K
+    call skip_tok
+    call skip_spc
+    call skip_tok
+    call skip_spc
+    lodsb
+    or al, al
+    jz .usage
+    dec esi
+    push esi
+    mov edi, tok_disk_mst+K
+    call strcmp
+    or eax, eax
+    jz .drive0
+    pop esi
+    push esi
+    mov edi, tok_disk_slv+K
+    call strcmp
+    or eax, eax
+    jz .drive1
+    pop esi
+    movzx eax, byte [esi]
+    sub al, '0'
+    cmp al, 3
+    ja .usage
+    jmp .do
+.drive0:
+    pop esi
+    xor eax, eax
+    jmp .do
+.drive1:
+    pop esi
+    mov eax, 1
+.do:
+    push eax
+    mov esi, msg_install_to+K
+    call puts
+    mov al, byte [esp]
+    add al, '0'
+    mov [num_buf+K], al
+    mov byte [num_buf+K+1], 0
+    mov esi, num_buf+K
+    call puts
+    mov esi, msg_colon+K
+    call puts
+    xor eax, eax
+    xor ebx, ebx
+    call ata_read_sector
+    or eax, eax
+    jz .fail
+    pop eax
+    push eax
+    xor ebx, ebx
+    mov esi, ata_buf+K
+    call ata_write_sector
+    or eax, eax
+    jz .fail
+    pop eax
+    push eax
+    mov ebx, 1
+    mov ecx, 32
+    mov edx, K
+.kloop:
+    mov esi, edx
+    call ata_write_sector
+    or eax, eax
+    jz .fail2
+    add edx, 512
+    inc ebx
+    dec ecx
+    jnz .kloop
+    pop eax
+    mov esi, msg_install_done+K
+    call puts
+    ret
+.fail2:
+    pop eax
+    mov esi, msg_install_fail+K
+    call puts
+    ret
+.fail:
+    pop eax
+    mov esi, msg_install_fail+K
+    call puts
+    ret
+.usage:
+    mov esi, msg_sys_install_usage+K
     call puts
     ret
 
@@ -1142,6 +1359,7 @@ dd cap6_name+K, arc_read_handler+K
 dd cap7_name+K, arc_info_handler+K
 dd cap8_name+K, disk_list_handler+K
 dd cap9_name+K, disk_info_handler+K
+dd cap10_name+K, sys_install_handler+K
 dd 0
 
 cap1_name db "console", 0
@@ -1153,6 +1371,7 @@ cap6_name db "arc.read", 0
 cap7_name db "arc.info", 0
 cap8_name db "disk.list", 0
 cap9_name db "disk.info", 0
+cap10_name db "sys.install", 0
 
 ; --- Task Table ---
 task_list:
@@ -1163,14 +1382,14 @@ dd 0
 
 ; --- Strings ---
 msg_sep db "========================================", LF, 0
-msg_title db "       A E V U M   O S   v0.1.2.2", LF
+msg_title db "       A E V U M   O S   v0.1.2.3", LF
 db "            (Pre-Alpha)", LF, 0
 msg_kernel db "   Capability-Based Fractal Kernel", LF, 0
 msg_not db "      Not Unix  /  Not DOS", LF, 0
 msg_help_txt db "     Type 'help' for commands", LF, 0
 
 msg_info db "=== Aevum OS ===", LF
-db "Version: 0.1.2.2 (Pre-Alpha)", LF
+db "Version: 0.1.2.3 (Pre-Alpha)", LF
 db "Kernel: Capability-Based Fractal", LF
 db "IPC: Message-Oriented via Capabilities", LF
 db "Process Model: Task Hierarchy", LF
@@ -1194,7 +1413,7 @@ db "  halt      - halt system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
-msg_ver db "Aevum OS version 0.1.2.2", 0
+msg_ver db "Aevum OS version 0.1.2.3", 0
 msg_who db "guest@aevum (capability level: user)", 0
 msg_caps_hdr db "Capabilities:", LF, 0
 msg_no_cap db "Capability not found", 0
@@ -1240,6 +1459,11 @@ msg_size_sep db " (", 0
 msg_size_gb db " GB)", 0
 msg_size_mb db " MB)", 0
 msg_disk_info_usage db "Usage: invoke disk.info [master|slave]", 0
+msg_sys_install_usage db "Usage: invoke sys.install [master|slave|0-3]", 0
+msg_install_to db "Installing to drive ", 0
+msg_colon db "...", LF, 0
+msg_install_done db "Install complete!", LF, 0
+msg_install_fail db "Install failed!", LF, 0
 tok_disk_mst db "master", 0
 tok_disk_slv db "slave", 0
 
@@ -1273,7 +1497,7 @@ dd entry3_data - archive_start
 archive_entries_end:
 
 entry0_data:
-  db "Aevum OS v0.1.2.2", LF
+  db "Aevum OS v0.1.2.3", LF
   db "Capability-Based Fractal Kernel", LF
   db "Not Unix. Not DOS.", 0
 entry0_end:

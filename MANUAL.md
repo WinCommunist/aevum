@@ -127,7 +127,7 @@ System information: version, architecture, kernel type.
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.2.2 (Pre-Alpha)
+Version: 0.1.2.3 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -152,6 +152,38 @@ Invoke a capability by name.
 ```
 aevum$ invoke console
 Capability invoked
+```
+
+### `invoke disk.list`
+List all detected ATA drives (Primary/Secondary Master/Slave) with model and size.
+
+```
+aevum$ invoke disk.list
+
+Disks:
+  Primary Master: QEMU HARDDISK (  64 MB)
+  Primary Slave: QEMU HARDDISK (  64 MB)
+  Secondary Master: (not present)
+  Secondary Slave: (not present)
+```
+
+### `invoke disk.info <master|slave>`
+Show info for a specific drive.
+
+```
+aevum$ invoke disk.info master
+
+  Primary Master: QEMU HARDDISK (  64 MB)
+```
+
+### `invoke sys.install <master|slave|0-3>`
+Install Aevum OS to a target drive. Copies the boot sector and kernel (sectors 0–32) from the running drive (primary master) to the specified drive, making it bootable.
+
+```
+aevum$ invoke sys.install 1
+
+Installing to drive 1...
+Install complete!
 ```
 
 ### `tasks`
