@@ -125,7 +125,7 @@ System information: version, architecture, kernel type.
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.2 (Pre-Alpha)
+Version: 0.1.2.1 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -412,11 +412,15 @@ All data accesses use `+K` to compensate for flat segmentation
 
 ## Version History
 
-**v0.1.2 (Pre-Alpha)**
+**v0.1.2.1 (Pre-Alpha)**
 - Archive implementation: `arc.list`, `arc.read`, `arc.info` capabilities
 - Archive format (AARC): entries with names stored in kernel memory
 - Built-in archive entries: about, philosophy, commands, license
 - Capability handler dispatch (invoke now calls handlers)
+- Kernel size increased to 16 KB to accommodate archive data
+- Bootloader reads 32 sectors
+
+**v0.1.2 (Pre-Alpha)**
 - Fixed: `color` command no longer crashes with fg > 7 or bg > 7
 - Fixed: `color` command now persists across commands (no longer reset by prompt)
 - Fixed: prompt preserves user background color

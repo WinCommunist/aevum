@@ -126,7 +126,7 @@ aevum$ help
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.2 (Pre-Alpha)
+Version: 0.1.2.1 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -412,11 +412,15 @@ flat-сегментацию (DS base = 0, а данные лежат по адр
 
 ## История версий
 
-**v0.1.2 (Pre-Alpha)**
+**v0.1.2.1 (Pre-Alpha)**
 - Реализация архивов: возможности `arc.list`, `arc.read`, `arc.info`
 - Формат AARC: записи с именами в памяти ядра
 - Встроенные записи: about, philosophy, commands, license
 - Диспетчеризация capability-обработчиков (invoke вызывает хендлеры)
+- Ядро увеличено до 16 КБ для размещения архива
+- Загрузчик читает 32 сектора
+
+**v0.1.2 (Pre-Alpha)**
 - Исправлено: команда `color` больше не вызывает сбой с fg > 7 или bg > 7
 - Исправлено: `color` теперь сохраняется между командами (промпт больше не сбрасывает)
 - Исправлено: промпт сохраняет фон пользователя
