@@ -631,6 +631,12 @@ cmd_invoke:
     jmp .l
 
 .found:
+    mov ecx, [edi+4]
+    or ecx, ecx
+    jz .no_handler
+    call ecx
+    ret
+.no_handler:
     mov esi, msg_inv_ok+K
     call puts
     ret
@@ -755,6 +761,91 @@ cmd_halt:
     hlt
     jmp .l
 
+; ===== Archive Capability Handlers =====
+arc_list_handler:
+    mov edi, [archive_ptr+K]
+    or edi, edi
+    jz .bad
+    cmp [edi], dword 'AARC'
+    jne .bad
+    mov ecx, [edi+8]
+    add edi, 16
+    mov esi, msg_arc_hdr+K
+    call puts
+.l:
+    or ecx, ecx
+    jz .d
+    push ecx
+    mov esi, edi
+    call puts
+    call nl
+    pop ecx
+    add edi, 32
+    dec ecx
+    jmp .l
+.d:
+    ret
+.bad:
+    mov esi, msg_arc_bad+K
+    call puts
+    ret
+
+arc_read_handler:
+    mov esi, cmd_buf+K
+    call skip_tok
+    call skip_spc
+    call skip_tok
+    call skip_spc
+    lodsb
+    or al, al
+    jz .usage
+    dec esi
+    call arc_find_entry
+    or eax, eax
+    jz .nf
+    mov esi, eax
+    call puts
+    ret
+.nf:
+    mov esi, msg_arc_nf+K
+    call puts
+    ret
+.usage:
+    mov esi, msg_arc_read_usage+K
+    call puts
+    ret
+
+arc_info_handler:
+    mov esi, cmd_buf+K
+    call skip_tok
+    call skip_spc
+    call skip_tok
+    call skip_spc
+    lodsb
+    or al, al
+    jz .usage
+    dec esi
+    call arc_find_entry
+    or eax, eax
+    jz .nf
+    mov esi, msg_arc_info_hdr+K
+    call puts
+    mov esi, msg_arc_size+K
+    call puts
+    mov eax, edx
+    call itoa
+    call puts
+    call nl
+    ret
+.nf:
+    mov esi, msg_arc_nf+K
+    call puts
+    ret
+.usage:
+    mov esi, msg_arc_info_usage+K
+    call puts
+    ret
+
 ; ===== Splash =====
 splash:
     mov al, 0x0B
@@ -799,6 +890,39 @@ serial_puts:
     pop esi eax
     ret
 
+; ===== Archive Functions =====
+arc_find_entry:
+    push edi ecx
+    mov edi, [archive_ptr+K]
+    or edi, edi
+    jz .nf
+    cmp [edi], dword 'AARC'
+    jne .nf
+    mov ecx, [edi+8]
+    add edi, 16
+.l:
+    or ecx, ecx
+    jz .nf
+    push esi edi ecx
+    mov edi, edi
+    call strcmp
+    pop ecx edi esi
+    or eax, eax
+    jz .found
+    add edi, 32
+    dec ecx
+    jmp .l
+.found:
+    mov eax, [edi+28]
+    add eax, [archive_ptr+K]
+    mov edx, [edi+24]
+    pop ecx edi
+    ret
+.nf:
+    xor eax, eax
+    pop ecx edi
+    ret
+
 ; ===== Data =====
 align 4
 cursor_row db 0
@@ -808,6 +932,7 @@ color_attr db 0x07
 cmd_len db 0
 cmd_buf rb 256
 num_buf rb 16
+archive_ptr dd K + archive_start
 
 ; --- Scancode Tables (US layout) ---
 sc_norm:
@@ -830,12 +955,18 @@ dd cap1_name+K, 0
 dd cap2_name+K, 0
 dd cap3_name+K, 0
 dd cap4_name+K, 0
+dd cap5_name+K, arc_list_handler
+dd cap6_name+K, arc_read_handler
+dd cap7_name+K, arc_info_handler
 dd 0
 
 cap1_name db "console", 0
 cap2_name db "mem.info", 0
 cap3_name db "sys.info", 0
 cap4_name db "task.list", 0
+cap5_name db "arc.list", 0
+cap6_name db "arc.read", 0
+cap7_name db "arc.info", 0
 
 ; --- Task Table ---
 task_list:
@@ -903,4 +1034,76 @@ tok_ver db "version", 0
 tok_who db "whoami", 0
 tok_halt db "halt", 0
 
-times 8192-($-$$) db 0
+; --- Archive Strings ---
+msg_arc_hdr db "Archive entries:", LF, 0
+msg_arc_nf db "Entry not found", 0
+msg_arc_bad db "Archive corrupted", 0
+msg_arc_read_usage db "Usage: invoke arc.read <name>", 0
+msg_arc_info_hdr db "Entry info:", LF, 0
+msg_arc_size db "Size: ", 0
+msg_arc_info_usage db "Usage: invoke arc.info <name>", 0
+
+; --- Archive Data (AARC format) ---
+archive_start:
+  db "AARC"
+  dd 1
+  dd 4
+  dd archive_entries_end - archive_start
+archive_entries:
+entry0_name db "about", 0
+times 24 - ($ - entry0_name) db 0
+dd entry0_end - entry0_data
+dd entry0_data - archive_start
+
+entry1_name db "philosophy", 0
+times 24 - ($ - entry1_name) db 0
+dd entry1_end - entry1_data
+dd entry1_data - archive_start
+
+entry2_name db "commands", 0
+times 24 - ($ - entry2_name) db 0
+dd entry2_end - entry2_data
+dd entry2_data - archive_start
+
+entry3_name db "license", 0
+times 24 - ($ - entry3_name) db 0
+dd entry3_end - entry3_data
+dd entry3_data - archive_start
+
+archive_entries_end:
+
+entry0_data:
+  db "Aevum OS v0.1.2", LF
+  db "Capability-Based Fractal Kernel", LF
+  db "Not Unix. Not DOS.", 0
+entry0_end:
+
+entry1_data:
+  db "Aevum is built on three concepts:", LF
+  db "- Capabilities (access control)", LF
+  db "- Fractal Tasks (tree hierarchy)", LF
+  db "- Archives (storage)", LF, LF
+  db "No PIDs. No signals. No hierarchical FS.", 0
+entry1_end:
+
+entry2_data:
+  db "color - set text color", LF
+  db "help - this help", LF
+  db "info - system info", LF
+  db "caps - list capabilities", LF
+  db "invoke - invoke a capability", LF
+  db "tasks - task hierarchy", LF
+  db "echo - print text", LF
+  db "calc - calculator", LF
+  db "clear - clear screen", LF
+  db "version - show version", LF
+  db "whoami - current user", LF
+  db "halt - halt system", 0
+entry2_end:
+
+entry3_data:
+  db "Aevum OS is released into the", LF
+  db "Public Domain. Do whatever you want.", 0
+entry3_end:
+
+times 16384-($-$$) db 0

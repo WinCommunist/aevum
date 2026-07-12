@@ -46,7 +46,7 @@ err_msg db "Aevum: Boot error", 0
 DAP:
     db 0x10
     db 0
-    dw 16
+    dw 32
     dw 0x0000
     dw 0x1000
     dq 1

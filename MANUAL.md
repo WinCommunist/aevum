@@ -90,14 +90,17 @@ without holding the proper capability.
 
 Built-in system capabilities:
 
-| Capability  | Description                     |
-|-------------|---------------------------------|
-| `console`   | Console access (I/O)            |
-| `mem.info`  | Memory information              |
-| `sys.info`  | System information              |
-| `task.list` | View task tree                  |
+| Capability  | Description                                |
+|-------------|--------------------------------------------|
+| `console`   | Console access (I/O)                       |
+| `mem.info`  | Memory information                         |
+| `sys.info`  | System information                         |
+| `task.list` | View task tree                             |
+| `arc.list`  | List archive entries                       |
+| `arc.read`  | Read an archive entry by name              |
+| `arc.info`  | Show info about an archive entry           |
 
-The `invoke <name>` command activates a capability.
+The `invoke <name>` command activates a capability. Some capabilities (like `arc.read`, `arc.info`) accept an argument: `invoke arc.read about`.
 
 ### Message-Oriented IPC
 
@@ -410,6 +413,10 @@ All data accesses use `+K` to compensate for flat segmentation
 ## Version History
 
 **v0.1.2 (Pre-Alpha)**
+- Archive implementation: `arc.list`, `arc.read`, `arc.info` capabilities
+- Archive format (AARC): entries with names stored in kernel memory
+- Built-in archive entries: about, philosophy, commands, license
+- Capability handler dispatch (invoke now calls handlers)
 - Fixed: `color` command no longer crashes with fg > 7 or bg > 7
 - Fixed: `color` command now persists across commands (no longer reset by prompt)
 - Fixed: prompt preserves user background color
