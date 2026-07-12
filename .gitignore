@@ -1,0 +1,13 @@
+*.bin
+aevum.img
+*.exe
+*.com
+*.obj
+*.o
+*.pyc
+__pycache__/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
