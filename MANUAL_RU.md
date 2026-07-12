@@ -123,7 +123,7 @@ aevum$ help
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.2.1 (Pre-Alpha)
+Version: 0.1.2 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -189,18 +189,6 @@ aevum$ calc 7 * 6
 aevum$ color 2
 aevum$ color 15 1
 ```
-
-### `run <name>`
-Запустить встроенную программу по имени.
-
-```
-aevum$ run hello
-Running program...
-Hello from Aevum!
-Program exited.
-```
-
-В комплекте `hello` — демо-программа, пишущая напрямую в VGA.
 
 ### `clear`
 Очистить экран.
@@ -420,13 +408,6 @@ flat-сегментацию (DS base = 0, а данные лежат по адр
 ---
 
 ## История версий
-
-**v0.1.2.1 (Pre-Alpha)**
-- Формат программ AEX (Aevum Executable): магия `AEX`, заголовок 12 байт
-- Встроенная программа "hello" (в ядре)
-- Команда `run <name>` для запуска программ
-- Программы копируются в 0x30000 и выполняются в ring 0
-- 13 команд
 
 **v0.1.2 (Pre-Alpha)**
 - Исправлено: команда `color` больше не вызывает сбой с fg > 7 или bg > 7

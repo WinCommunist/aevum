@@ -30,7 +30,7 @@ chmod +x build.sh run.sh
 ./run.sh
 ```
 
-This produces `aevum.img` — a bootable floppy image with a 512-byte bootloader and an 8 KB kernel. The kernel boots into protected mode, initializes VGA text mode (80×25), a polling keyboard driver, and a shell with 13 commands (including `run` for executing embedded programs).
+This produces `aevum.img` — a bootable floppy image with a 512-byte bootloader and an 8 KB kernel. The kernel boots into protected mode, initializes VGA text mode (80×25), a polling keyboard driver, and a shell with 12 commands.
 
 ---
 
@@ -39,7 +39,7 @@ This produces `aevum.img` — a bootable floppy image with a 512-byte bootloader
 | File | Purpose |
 |------|---------|
 | `boot.asm` | Bootloader (real mode, INT 13h, A20, PMode switch) |
-| `kernel.asm` | Kernel (PMode, VGA, keyboard, shell, 13 commands) |
+| `kernel.asm` | Kernel (PMode, VGA, keyboard, shell, 12 commands) |
 | `build.bat` / `build.sh` | FASM assembly scripts |
 | `run.bat` / `run.sh` | QEMU launcher scripts |
 | `MANUAL.md` | Full manual (English) |
@@ -83,7 +83,7 @@ chmod +x build.sh run.sh
 ./run.sh
 ```
 
-Результат — `aevum.img`: загрузочный образ дискеты с загрузчиком (512 байт) и ядром (8 КБ). Ядро загружается в защищённый режим, инициализирует VGA text mode (80×25), клавиатуру (опрос) и оболочку с 13 командами (включая `run` для запуска программ).
+Результат — `aevum.img`: загрузочный образ дискеты с загрузчиком (512 байт) и ядром (8 КБ). Ядро загружается в защищённый режим, инициализирует VGA text mode (80×25), клавиатуру (опрос) и оболочку с 12 командами.
 
 ---
 
@@ -92,7 +92,7 @@ chmod +x build.sh run.sh
 | Файл | Назначение |
 |------|-----------|
 | `boot.asm` | Загрузчик (real mode, INT 13h, A20, переход в PMode) |
-| `kernel.asm` | Ядро (PMode, VGA, клавиатура, shell, 13 команд) |
+| `kernel.asm` | Ядро (PMode, VGA, клавиатура, shell, 12 команд) |
 | `build.bat` / `build.sh` | Скрипты сборки (FASM) |
 | `run.bat` / `run.sh` | Скрипты запуска (QEMU) |
 | `MANUAL.md` | Полный мануал (английский) |

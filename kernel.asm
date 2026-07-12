@@ -13,7 +13,6 @@ SH = 25
 BS = 0x08
 LF = 0x0A
 CR = 0x0D
-PROG_BASE = 0x30000
 
 ; ===== Real Mode Entry =====
 start:
@@ -526,18 +525,12 @@ exec_cmd:
     call cmd_color
     jmp .end
 .n11:
-    mov edi, tok_run+K
-    call strcmp
-    jnz .n12
-    call cmd_run
-    jmp .end
-.n12:
     mov edi, tok_halt+K
     call strcmp
-    jnz .n14
+    jnz .n12
     call cmd_halt
     jmp .end
-.n14:
+.n12:
     mov al, [color_attr+K]
     push eax
     mov al, 0x0C
@@ -585,54 +578,6 @@ cmd_color:
     pop ecx
 .usage:
     mov esi, msg_color_usage+K
-    call puts
-    ret
-
-cmd_run:
-    mov esi, cmd_buf+K
-    call skip_tok
-    call skip_spc
-    lodsb
-    or al, al
-    jz .usage
-    dec esi
-    mov edi, prog_list+K
-.lookup:
-    mov ecx, [edi]
-    or ecx, ecx
-    jz .nf
-    push esi edi
-    mov edi, ecx
-    call strcmp
-    pop edi esi
-    or eax, eax
-    jz .found
-    add edi, 8
-    jmp .lookup
-.found:
-    mov ecx, [edi+4]
-    mov eax, [ecx+4]
-    mov edx, [ecx+8]
-    push eax
-    mov esi, ecx
-    mov edi, PROG_BASE
-    mov ecx, edx
-    add ecx, 12
-    rep movsb
-    mov esi, msg_prog_run+K
-    call puts
-    pop eax
-    add eax, PROG_BASE
-    call eax
-    mov esi, msg_prog_done+K
-    call puts
-    ret
-.nf:
-    mov esi, msg_prog_nf+K
-    call puts
-    ret
-.usage:
-    mov esi, msg_run_usage+K
     call puts
     ret
 
@@ -901,14 +846,14 @@ dd 0
 
 ; --- Strings ---
 msg_sep db "========================================", LF, 0
-msg_title db "       A E V U M   O S   v0.1.2.1", LF
+msg_title db "       A E V U M   O S   v0.1.2", LF
 db "            (Pre-Alpha)", LF, 0
 msg_kernel db "   Capability-Based Fractal Kernel", LF, 0
 msg_not db "      Not Unix  /  Not DOS", LF, 0
 msg_help_txt db "     Type 'help' for commands", LF, 0
 
 msg_info db "=== Aevum OS ===", LF
-db "Version: 0.1.2.1 (Pre-Alpha)", LF
+db "Version: 0.1.2 (Pre-Alpha)", LF
 db "Kernel: Capability-Based Fractal", LF
 db "IPC: Message-Oriented via Capabilities", LF
 db "Process Model: Task Hierarchy", LF
@@ -928,12 +873,11 @@ db "  calc      - calculator", LF
 db "  clear     - clear screen", LF
 db "  version   - show version", LF
 db "  whoami    - current user", LF
-db "  run       - run a program", LF
 db "  halt      - halt system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
-msg_ver db "Aevum OS version 0.1.2.1", 0
+msg_ver db "Aevum OS version 0.1.2", 0
 msg_who db "guest@aevum (capability level: user)", 0
 msg_caps_hdr db "Capabilities:", LF, 0
 msg_no_cap db "Capability not found", 0
@@ -957,47 +901,6 @@ tok_calc db "calc", 0
 tok_clear db "clear", 0
 tok_ver db "version", 0
 tok_who db "whoami", 0
-tok_run db "run", 0
 tok_halt db "halt", 0
-
-; --- Program Table ---
-prog_list:
-  dd prog_name_hello+K, prog_hello+K
-  dd 0
-
-prog_name_hello db "hello", 0
-
-; --- Embedded Programs (AEX format) ---
-; Header: db "AEX", version(1), dd entry_offset, dd code_size
-prog_hello:
-  db "AEX"
-  db 0x01
-  dd 12
-  dd prog_hello_end - prog_hello_code
-prog_hello_code:
-  call .next
-.next:
-  pop ebp
-  sub ebp, 5
-  lea esi, [ebp + (msg - prog_hello_code)]
-  mov edi, 0xB8000 + (12*80)*2
-.l:
-  lodsb
-  or al, al
-  jz .d
-  mov [edi], al
-  mov byte [edi+1], 0x0A
-  add edi, 2
-  jmp .l
-.d:
-  ret
-msg db "Hello from Aevum!", 0
-prog_hello_end:
-
-; --- Program Strings ---
-msg_prog_run db "Running program...", LF, 0
-msg_prog_done db "Program exited.", LF, 0
-msg_prog_nf db "Program not found.", 0
-msg_run_usage db "Usage: run <name>", 0
 
 times 8192-($-$$) db 0
