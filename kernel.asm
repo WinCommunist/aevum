@@ -411,6 +411,7 @@ itoa:
 ; ===== Shell =====
 shell:
 .l:
+    mov al, [color_attr+K]
     push eax
     mov al, 0x0A
     call set_color
