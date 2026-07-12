@@ -413,7 +413,8 @@ shell:
 .l:
     mov al, [color_attr+K]
     push eax
-    mov al, 0x0A
+    and al, 0xF0
+    or al, 0x0A
     call set_color
     mov esi, msg_prompt+K
     call puts
@@ -530,11 +531,13 @@ exec_cmd:
     call cmd_halt
     jmp .end
 .n13:
+    mov al, [color_attr+K]
+    push eax
     mov al, 0x0C
     call set_color
     mov esi, msg_unknown+K
     call puts
-    mov al, 0x07
+    pop eax
     call set_color
 .end:
     call nl
@@ -739,11 +742,13 @@ cmd_who:
     ret
 
 cmd_halt:
+    mov al, [color_attr+K]
+    push eax
     mov al, 0x0C
     call set_color
     mov esi, msg_halt+K
     call puts
-    mov al, 0x07
+    pop eax
     call set_color
     cli
 .l:
