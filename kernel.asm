@@ -1522,14 +1522,14 @@ dd 0
 
 ; --- Strings ---
 msg_sep db "========================================", LF, 0
-msg_title db "       A E V U M   O S   v0.1.3.0", LF
+msg_title db "       A E V U M   O S   v0.1.3.1", LF
 db "            (Pre-Alpha)", LF, 0
 msg_kernel db "   Capability-Based Fractal Kernel", LF, 0
 msg_not db "      Not Unix  /  Not DOS", LF, 0
 msg_help_txt db "     Type 'help' for commands", LF, 0
 
 msg_info db "=== Aevum OS ===", LF
-db "Version: 0.1.3.0 (Pre-Alpha)", LF
+db "Version: 0.1.3.1 (Pre-Alpha)", LF
 db "Kernel: Capability-Based Fractal", LF
 db "IPC: Message-Oriented via Capabilities", LF
 db "Process Model: Task Hierarchy", LF
@@ -1553,7 +1553,7 @@ db "  halt      - halt system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
-msg_ver db "Aevum OS version 0.1.3.0", 0
+msg_ver db "Aevum OS version 0.1.3.1", 0
 msg_who db "guest@aevum (capability level: user)", 0
 msg_caps_hdr db "Capabilities:", LF, 0
 msg_no_cap db "Capability not found", 0
@@ -1646,7 +1646,7 @@ dd entry3_data - archive_start
 archive_entries_end:
 
 entry0_data:
-  db "Aevum OS v0.1.3.0", LF
+  db "Aevum OS v0.1.3.1", LF
   db "Capability-Based Fractal Kernel", LF
   db "Not Unix. Not DOS.", 0
 entry0_end:
