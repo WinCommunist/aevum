@@ -1282,6 +1282,107 @@ sys_install_handler:
     call puts
     ret
 
+; ===== System Info =====
+sys_info_handler:
+    push eax ebx ecx edx esi edi
+    mov esi, msg_sysinfo_hdr+K
+    call puts
+
+    ; --- CPU ---
+    mov esi, msg_info_cpu+K
+    call puts
+    pushfd
+    pushfd
+    xor dword [esp], 0x200000
+    popfd
+    pushfd
+    pop eax
+    xor eax, [esp]
+    add esp, 4
+    test eax, 0x200000
+    jz .no_cpuid
+    mov eax, 0
+    cpuid
+    mov dword [num_buf+K], ebx
+    mov dword [num_buf+K+4], edx
+    mov dword [num_buf+K+8], ecx
+    mov byte [num_buf+K+12], 0
+    mov esi, num_buf+K
+    call puts
+    mov eax, 1
+    cpuid
+    mov byte [num_buf+K], ' '
+    mov byte [num_buf+K+1], '('
+    mov byte [num_buf+K+2], 0
+    mov esi, num_buf+K
+    call puts
+    mov eax, ebx
+    shr eax, 16
+    and eax, 0xFF
+    call itoa
+    call puts
+    mov esi, msg_cpu_threads+K
+    call puts
+    call nl
+    jmp .mem
+.no_cpuid:
+    mov esi, msg_na+K
+    call puts
+    call nl
+.mem:
+    ; --- Memory ---
+    mov esi, msg_info_ram+K
+    call puts
+    xor eax, eax
+    mov ax, [0x413]
+    call itoa
+    call puts
+    mov esi, msg_kb+K
+    call puts
+    mov al, 0x30
+    out 0x70, al
+    in al, 0x71
+    mov ah, al
+    mov al, 0x31
+    out 0x70, al
+    in al, 0x71
+    xchg al, ah
+    or eax, eax
+    jz .no_ext
+    push eax
+    mov esi, msg_sep_comma+K
+    call puts
+    pop eax
+    call itoa
+    call puts
+    mov esi, msg_kb_ext+K
+    call puts
+    call nl
+    jmp .disks
+.no_ext:
+    call nl
+.disks:
+    mov esi, msg_info_disk+K
+    call puts
+    mov esi, msg_disk_pri_m+K
+    call puts
+    xor eax, eax
+    call disk_show_drive
+    mov esi, msg_disk_pri_s+K
+    call puts
+    mov eax, 1
+    call disk_show_drive
+    mov esi, msg_disk_sec_m+K
+    call puts
+    mov eax, 2
+    call disk_show_drive
+    mov esi, msg_disk_sec_s+K
+    call puts
+    mov eax, 3
+    call disk_show_drive
+    pop edi esi edx ecx ebx eax
+    ret
+
 ; ===== Splash =====
 splash:
     mov al, 0x0B
@@ -1391,7 +1492,7 @@ times 64 db 0
 cap_list:
 dd cap1_name+K, 0
 dd cap2_name+K, 0
-dd cap3_name+K, 0
+dd cap3_name+K, sys_info_handler+K
 dd cap4_name+K, 0
 dd cap5_name+K, arc_list_handler+K
 dd cap6_name+K, arc_read_handler+K
@@ -1428,7 +1529,7 @@ msg_not db "      Not Unix  /  Not DOS", LF, 0
 msg_help_txt db "     Type 'help' for commands", LF, 0
 
 msg_info db "=== Aevum OS ===", LF
-db "Version: 0.1.2.4 (Pre-Alpha)", LF
+db "Version: 0.1.3.0 (Pre-Alpha)", LF
 db "Kernel: Capability-Based Fractal", LF
 db "IPC: Message-Oriented via Capabilities", LF
 db "Process Model: Task Hierarchy", LF
@@ -1452,7 +1553,7 @@ db "  halt      - halt system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
-msg_ver db "Aevum OS version 0.1.2.4", 0
+msg_ver db "Aevum OS version 0.1.3.0", 0
 msg_who db "guest@aevum (capability level: user)", 0
 msg_caps_hdr db "Capabilities:", LF, 0
 msg_no_cap db "Capability not found", 0
@@ -1499,11 +1600,19 @@ msg_size_gb db " GB)", 0
 msg_size_mb db " MB)", 0
 msg_disk_info_usage db "Usage: invoke disk.info [master|slave]", 0
 msg_sys_install_usage db "Usage: invoke sys.install [master|slave|0-3]", 0
-msg_auto_disk db "invoke disk.list", 0
 msg_install_to db "Installing to drive ", 0
 msg_colon db "...", LF, 0
 msg_install_done db "Install complete!", LF, 0
 msg_install_fail db "Install failed!", LF, 0
+msg_sysinfo_hdr db LF, "=== System Info ===", LF, 0
+msg_info_cpu db "CPU: ", 0
+msg_info_ram db "RAM: ", 0
+msg_info_disk db LF, "Disks:", LF, 0
+msg_kb db " KB base", 0
+msg_kb_ext db " KB extended", 0
+msg_sep_comma db ", ", 0
+msg_cpu_threads db " thread(s))", LF, 0
+msg_na db "N/A", 0
 tok_disk_mst db "master", 0
 tok_disk_slv db "slave", 0
 
