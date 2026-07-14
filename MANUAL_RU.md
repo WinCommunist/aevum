@@ -126,7 +126,7 @@ aevum$ help
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.3.0 (Pre-Alpha)
+Version: 0.1.3.1 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -214,7 +214,7 @@ aevum$ color 15 1
 
 ```
 aevum$ version
-Aevum OS version 0.1.3.0
+Aevum OS version 0.1.3.1
 ```
 
 ### `whoami`
