@@ -90,17 +90,15 @@ without holding the proper capability.
 
 Built-in system capabilities:
 
-| Capability  | Description                                |
-|-------------|--------------------------------------------|
-| `console`   | Console access (I/O)                       |
-| `mem.info`  | Memory information                         |
-| `sys.info`  | System information                         |
-| `task.list` | View task tree                             |
-| `arc.list`  | List archive entries                       |
-| `arc.read`  | Read an archive entry by name              |
-| `arc.info`  | Show info about an archive entry           |
-| `disk.list` | List ATA drives                            |
-| `disk.info` | Show ATA drive info (master/slave or all)  |
+| Capability    | Description                                |
+|---------------|--------------------------------------------|
+| `sys.info`    | System information (CPU, RAM, disks)       |
+| `sys.install` | Install Aevum OS to a target drive         |
+| `arc.list`    | List archive entries                       |
+| `arc.read`    | Read an archive entry by name              |
+| `arc.info`    | Show info about an archive entry           |
+| `disk.list`   | List ATA drives                            |
+| `disk.info`   | Show ATA drive info (master/slave or all)  |
 
 The `invoke <name>` command activates a capability. Some capabilities accept an argument: `invoke arc.read about`, `invoke disk.info master`.
 
@@ -127,7 +125,7 @@ System information: version, architecture, kernel type.
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.2.3 (Pre-Alpha)
+Version: 0.1.3.0 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -140,10 +138,13 @@ List available capabilities.
 aevum$ caps
 
 Capabilities:
-console
-mem.info
 sys.info
-task.list
+arc.list
+arc.read
+arc.info
+disk.list
+disk.info
+sys.install
 ```
 
 ### `invoke <name>`
@@ -184,6 +185,24 @@ aevum$ invoke sys.install 1
 
 Installing to drive 1...
 Install complete!
+```
+
+### `invoke sys.info`
+Show detailed system information: CPU vendor/threads, RAM (base + extended), and all ATA drives.
+
+```
+aevum$ invoke sys.info
+
+=== System Info ===
+CPU: AuthenticAMD (1 thread(s))
+
+RAM: 639 KB base, 64512 KB extended
+
+Disks:
+  Primary Master: QEMU HARDDISK                            (0 MB)
+  Primary Slave: QEMU HARDDISK                            (8 MB)
+  Secondary Master: (not present)
+  Secondary Slave: (not present)
 ```
 
 ### `tasks`
@@ -234,7 +253,7 @@ Show version.
 
 ```
 aevum$ version
-Aevum OS version 0.1.2
+Aevum OS version 0.1.3.0
 ```
 
 ### `whoami`
@@ -254,7 +273,20 @@ System halted.
 ```
 
 The CPU then enters a `cli; hlt; jmp` loop.
-Close the QEMU window or press Ctrl+Alt+2, then type `quit`.
+
+### `reboot`
+Reboot the system via the keyboard controller (8042 pulse reset).
+
+```
+aevum$ reboot
+```
+
+### `poweroff`
+Power off the system. Uses QEMU ACPI port 0x604; if it fails, falls back to 8042 reset.
+
+```
+aevum$ poweroff
+```
 
 ---
 

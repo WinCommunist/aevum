@@ -91,17 +91,15 @@ root ─┬─ shell ─┬─ invoke
 
 Системные возможности (встроенные в ядро):
 
-| Возможность | Описание |
-|-------------|----------|
-| `console`   | Доступ к консоли (ввод/вывод) |
-| `mem.info`  | Информация о памяти |
-| `sys.info`  | Информация о системе |
-| `task.list` | Просмотр дерева задач |
-| `arc.list`  | Список записей архива |
-| `arc.read`  | Чтение записи архива по имени |
-| `arc.info`  | Информация о записи архива |
-| `disk.list` | Список ATA-дисков |
-| `disk.info` | Информация об ATA-диске (master/slave или всё) |
+| Возможность   | Описание |
+|---------------|----------|
+| `sys.info`    | Информация о системе (CPU, RAM, диски) |
+| `sys.install` | Установка Aevum OS на целевой диск |
+| `arc.list`    | Список записей архива |
+| `arc.read`    | Чтение записи архива по имени |
+| `arc.info`    | Информация о записи архива |
+| `disk.list`   | Список ATA-дисков |
+| `disk.info`   | Информация об ATA-диске (master/slave или всё) |
 
 Команда `invoke <имя>` активирует возможность. Некоторые возможности принимают аргумент: `invoke arc.read about`, `invoke disk.info master`.
 
@@ -128,7 +126,7 @@ aevum$ help
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.2.3 (Pre-Alpha)
+Version: 0.1.3.0 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -141,18 +139,31 @@ IPC: Message-Oriented via Capabilities
 aevum$ caps
 
 Capabilities:
-console
-mem.info
 sys.info
-task.list
+arc.list
+arc.read
+arc.info
+disk.list
+disk.info
+sys.install
 ```
 
 ### `invoke <имя>`
-Вызвать возможность по имени.
+Вызвать возможность по имени. Некоторые возможности принимают аргумент: `invoke arc.read about`, `invoke disk.info master`.
 
 ```
-aevum$ invoke console
-Capability invoked
+aevum$ invoke sys.info
+
+=== System Info ===
+CPU: AuthenticAMD (1 thread(s))
+
+RAM: 639 KB base, 64512 KB extended
+
+Disks:
+  Primary Master: QEMU HARDDISK                            (0 MB)
+  Primary Slave: QEMU HARDDISK                            (8 MB)
+  Secondary Master: (not present)
+  Secondary Slave: (not present)
 ```
 
 ### `tasks`
@@ -203,7 +214,7 @@ aevum$ color 15 1
 
 ```
 aevum$ version
-Aevum OS version 0.1.2
+Aevum OS version 0.1.3.0
 ```
 
 ### `whoami`
@@ -223,7 +234,20 @@ System halted.
 ```
 
 После этого процессор входит в цикл `cli; hlt; jmp`.
-Закройте окно QEMU или нажмите Ctrl+Alt+2, затем `quit`.
+
+### `reboot`
+Перезагрузить систему через контроллер клавиатуры (8042 pulse reset).
+
+```
+aevum$ reboot
+```
+
+### `poweroff`
+Выключить питание. Использует ACPI-порт QEMU 0x604; при неудаче — 8042 reset.
+
+```
+aevum$ poweroff
+```
 
 ---
 
