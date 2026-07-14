@@ -1490,8 +1490,6 @@ times 64 db 0
 
 ; --- Capability Table ---
 cap_list:
-dd cap1_name+K, 0
-dd cap2_name+K, 0
 dd cap3_name+K, sys_info_handler+K
 dd cap4_name+K, 0
 dd cap5_name+K, arc_list_handler+K
@@ -1502,8 +1500,6 @@ dd cap9_name+K, disk_info_handler+K
 dd cap10_name+K, sys_install_handler+K
 dd 0
 
-cap1_name db "console", 0
-cap2_name db "mem.info", 0
 cap3_name db "sys.info", 0
 cap4_name db "task.list", 0
 cap5_name db "arc.list", 0
