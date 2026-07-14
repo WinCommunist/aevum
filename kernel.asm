@@ -532,6 +532,18 @@ exec_cmd:
     call cmd_halt
     jmp .end
 .n12:
+    mov edi, tok_reboot+K
+    call strcmp
+    jnz .n13
+    call cmd_reboot
+    jmp .end
+.n13:
+    mov edi, tok_poweroff+K
+    call strcmp
+    jnz .n14
+    call cmd_poweroff
+    jmp .end
+.n14:
     mov al, [color_attr+K]
     push eax
     mov al, 0x0C
@@ -758,6 +770,27 @@ cmd_halt:
     pop eax
     call set_color
     cli
+.l:
+    hlt
+    jmp .l
+
+cmd_reboot:
+    cli
+    mov dx, 0x64
+    mov al, 0xFE
+    out dx, al
+.l:
+    hlt
+    jmp .l
+
+cmd_poweroff:
+    cli
+    mov dx, 0x604
+    mov ax, 0x2000
+    out dx, ax
+    mov dx, 0x64
+    mov al, 0xFE
+    out dx, al
 .l:
     hlt
     jmp .l
@@ -1545,7 +1578,9 @@ db "  calc      - calculator", LF
 db "  clear     - clear screen", LF
 db "  version   - show version", LF
 db "  whoami    - current user", LF
-db "  halt      - halt system", LF, 0
+db "  halt      - halt system", LF
+db "  reboot    - reboot system", LF
+db "  poweroff  - power off system", LF, 0
 
 msg_prompt db "aevum$ ", 0
 msg_unknown db "Unknown command. Type help.", 0
@@ -1574,6 +1609,8 @@ tok_clear db "clear", 0
 tok_ver db "version", 0
 tok_who db "whoami", 0
 tok_halt db "halt", 0
+tok_reboot db "reboot", 0
+tok_poweroff db "poweroff", 0
 
 ; --- Archive Strings ---
 msg_arc_hdr db "Archive entries:", LF, 0
