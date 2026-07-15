@@ -40,7 +40,7 @@ chmod +x build.sh
 
 The script builds:
 1. `boot.asm` → `boot.bin` (512 bytes — bootloader)
-2. `kernel.asm` → `kernel.bin` (8 KB — kernel)
+2. `kernel.asm` → `kernel.bin` (16 KB — kernel)
 3. Combines into `aevum.img`
 
 ### Run
@@ -94,6 +94,7 @@ Built-in system capabilities:
 |---------------|--------------------------------------------|
 | `sys.info`    | System information (CPU, RAM, disks)       |
 | `sys.install` | Install Aevum OS to a target drive         |
+| `task.list`   | View dynamic task tree                     |
 | `arc.list`    | List archive entries                       |
 | `arc.read`    | Read an archive entry by name              |
 | `arc.info`    | Show info about an archive entry           |
@@ -125,7 +126,7 @@ System information: version, architecture, kernel type.
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.3.1 (Pre-Alpha)
+Version: 0.1.3.2 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -139,6 +140,7 @@ aevum$ caps
 
 Capabilities:
 sys.info
+task.list
 arc.list
 arc.read
 arc.info
@@ -206,15 +208,34 @@ Disks:
 ```
 
 ### `tasks`
-Show the task tree.
+Show the dynamic task tree. Each task has an ID, name, and parent. Tasks are created with `spawn`.
 
 ```
+aevum$ spawn worker
+Task 1 spawned.
+
 aevum$ tasks
 
 Task Hierarchy:
-root
-  shell
-    invoke
+[0] root
+  [1] worker
+```
+
+You can also view the tree via `invoke task.list`, which calls the same handler through the capability system.
+
+### `spawn <name>`
+Create a new task as a child of root. The task table holds up to 16 tasks.
+
+```
+aevum$ spawn helper
+Task 2 spawned.
+
+aevum$ tasks
+
+Task Hierarchy:
+[0] root
+  [1] worker
+  [2] helper
 ```
 
 ### `echo <text>`
@@ -253,7 +274,7 @@ Show version.
 
 ```
 aevum$ version
-Aevum OS version 0.1.3.1
+Aevum OS version 0.1.3.2
 ```
 
 ### `whoami`
@@ -317,9 +338,9 @@ The bootloader does the following:
 5. Jumps to `0x1000:0x0000` (physical address 0x10000)
 
 The kernel is loaded from LBA sector 1 (right after the bootloader),
-16 sectors (8192 bytes).
+32 sectors (16384 bytes).
 
-### kernel.asm (8 KB)
+### kernel.asm (16 KB)
 
 The kernel is written for FASM. Structure:
 
@@ -451,7 +472,7 @@ org 0x7C00          ; BIOS loads here
 DAP:                ; Disk Address Packet for INT 13h ah=0x42
   db 0x10           ; DAP size (16 bytes)
   db 0              ; reserved
-  dw 16             ; read 16 sectors
+  dw 32             ; read 32 sectors
   dw 0x0000         ; buffer offset
   dw 0x1000         ; buffer segment
   dq 1              ; LBA address (sector 1)
@@ -477,6 +498,33 @@ All data accesses use `+K` to compensate for flat segmentation
 ---
 
 ## Version History
+
+**v0.1.3.2 (Pre-Alpha)**
+- ATA PIO fixed: LBA mode (0xE0), pre-command BSY wait, manual word loops
+- `sys.install`: copies boot sector + kernel directly (no `ata_read_sector`)
+- `task.list` capability (cap4) wired to `cmd_tasks`
+- Dynamic task table: `spawn <name>` + `tasks` with indentation, up to 16 entries
+- `reboot` (8042 pulse) and `poweroff` (QEMU ACPI, fallback 8042) commands
+- Removed `console` and `mem.info` stub capabilities
+- Removed `commands` archive entry (duplicates `help`)
+- `sys.info` capability (cap3): CPU vendor/threads, RAM, disk scan
+- Kernel size: 16384 bytes (16 KB, 32 sectors)
+
+**v0.1.3.1 (Pre-Alpha)**
+- Dynamic task table: `spawn <name>` creates child tasks under root
+- `sys.info` capability: CPU, RAM, disk scan
+- `reboot` + `poweroff` shell commands
+- Removed stub capabilities (console, mem.info)
+- Removed `commands` from archive
+
+**v0.1.3.0 (Pre-Alpha)**
+- ATA PIO fixed: LBA mode (`or al, 0xE0`), pre-command BSY wait, stack balanced
+- `sys.install` copies boot sector from 0x7C00 + kernel from K
+- `task.list` capability added (cap4)
+- Dynamic task table (TCB: 16 × 20 bytes at end of binary)
+- `spawn` + `tasks` shell commands
+- `reboot` / `poweroff` commands
+- kernel.asm: ~1840 lines
 
 **v0.1.2.1 (Pre-Alpha)**
 - Archive implementation: `arc.list`, `arc.read`, `arc.info` capabilities

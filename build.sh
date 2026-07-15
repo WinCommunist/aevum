@@ -16,6 +16,10 @@ fi
 echo "[ok] Kernel: $(wc -c < kernel.bin) bytes"
 
 cat boot.bin kernel.bin > aevum.img
-echo "[ok] Image: aevum.img"
+SIZE=$(wc -c < aevum.img)
+if [ $SIZE -lt 65536 ]; then
+    dd if=/dev/zero bs=1 count=$((65536 - SIZE)) >> aevum.img 2>/dev/null
+fi
+echo "[ok] Image: aevum.img (${SIZE} bytes)"
 echo ""
 echo "Ready to run: qemu-system-x86_64 -drive file=aevum.img,format=raw -m 64"

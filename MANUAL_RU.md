@@ -40,7 +40,7 @@ chmod +x build.sh
 
 Скрипт собирает:
 1. `boot.asm` → `boot.bin` (512 байт — загрузчик)
-2. `kernel.asm` → `kernel.bin` (8 КБ — ядро)
+2. `kernel.asm` → `kernel.bin` (16 КБ — ядро)
 3. Объединяет в `aevum.img`
 
 ### Запуск
@@ -95,6 +95,7 @@ root ─┬─ shell ─┬─ invoke
 |---------------|----------|
 | `sys.info`    | Информация о системе (CPU, RAM, диски) |
 | `sys.install` | Установка Aevum OS на целевой диск |
+| `task.list`   | Просмотр динамического дерева задач |
 | `arc.list`    | Список записей архива |
 | `arc.read`    | Чтение записи архива по имени |
 | `arc.info`    | Информация о записи архива |
@@ -126,7 +127,7 @@ aevum$ help
 aevum$ info
 
 === Aevum OS ===
-Version: 0.1.3.1 (Pre-Alpha)
+Version: 0.1.3.2 (Pre-Alpha)
 Kernel: Capability-Based Fractal
 IPC: Message-Oriented via Capabilities
 ...
@@ -140,6 +141,7 @@ aevum$ caps
 
 Capabilities:
 sys.info
+task.list
 arc.list
 arc.read
 arc.info
@@ -167,15 +169,34 @@ Disks:
 ```
 
 ### `tasks`
-Показать дерево задач.
+Показать динамическое дерево задач. Каждая задача имеет ID, имя и родителя. Задачи создаются через `spawn`.
 
 ```
+aevum$ spawn worker
+Task 1 spawned.
+
 aevum$ tasks
 
 Task Hierarchy:
-root
-  shell
-    invoke
+[0] root
+  [1] worker
+```
+
+Также дерево можно вывести через `invoke task.list` — это вызывает тот же хендлер через систему возможностей.
+
+### `spawn <имя>`
+Создать новую задачу как дочернюю для root. Таблица задач вмещает до 16 записей.
+
+```
+aevum$ spawn helper
+Task 2 spawned.
+
+aevum$ tasks
+
+Task Hierarchy:
+[0] root
+  [1] worker
+  [2] helper
 ```
 
 ### `echo <текст>`
@@ -214,7 +235,7 @@ aevum$ color 15 1
 
 ```
 aevum$ version
-Aevum OS version 0.1.3.1
+Aevum OS version 0.1.3.2
 ```
 
 ### `whoami`
@@ -277,9 +298,9 @@ D:\uniq\aevum\
 5. Прыгает на `0x1000:0x0000` (физический адрес 0x10000)
 
 Ядро загружается с LBA-сектора 1 (сразу после загрузчика),
-16 секторов (8192 байт).
+32 сектора (16384 байт).
 
-### kernel.asm (8 КБ)
+### kernel.asm (16 КБ)
 
 Ядро написано для FASM. Структура:
 
@@ -411,7 +432,7 @@ org 0x7C00          ; BIOS загружает сюда
 DAP:                ; Disk Address Packet для INT 13h ah=0x42
   db 0x10           ; размер DAP (16 байт)
   db 0              ; резерв
-  dw 16             ; читать 16 секторов
+  dw 32             ; читать 32 сектора
   dw 0x0000         ; смещение буфера
   dw 0x1000         ; сегмент буфера
   dq 1              ; LBA-адрес (сектор 1)
@@ -437,6 +458,33 @@ flat-сегментацию (DS base = 0, а данные лежат по адр
 ---
 
 ## История версий
+
+**v0.1.3.2 (Pre-Alpha)**
+- ATA PIO починен: LBA mode (0xE0), ожидание BSY, ручной word-цикл
+- `sys.install`: копирует boot‑сектор + ядро напрямую (без `ata_read_sector`)
+- `task.list` возможность (cap4) подключена к `cmd_tasks`
+- Динамическая таблица задач: `spawn <name>` + `tasks` с отступами, до 16 записей
+- Команды `reboot` (8042 pulse) и `poweroff` (QEMU ACPI, fallback 8042)
+- Удалены stub-возможности `console` и `mem.info`
+- Удалена запись `commands` из архива (дублирует `help`)
+- `sys.info` возможность (cap3): CPU vendor/threads, RAM, диски
+- Размер ядра: 16384 байта (16 КБ, 32 сектора)
+
+**v0.1.3.1 (Pre-Alpha)**
+- Динамическая таблица задач: `spawn <name>` создаёт дочерние задачи
+- `sys.info` возможность: CPU, RAM, диски
+- Команды `reboot` + `poweroff`
+- Удалены stub-возможности (console, mem.info)
+- Удалена запись `commands` из архива
+
+**v0.1.3.0 (Pre-Alpha)**
+- ATA PIO починен: LBA (`or al, 0xE0`), ожидание BSY, стек сбалансирован
+- `sys.install` копирует boot‑сектор с 0x7C00 + ядро с K
+- Добавлена возможность `task.list` (cap4)
+- Динамическая таблица задач (TCB: 16 × 20 байт в конце бинарника)
+- Команды `spawn` + `tasks`
+- Команды `reboot` / `poweroff`
+- kernel.asm: ~1840 строк
 
 **v0.1.2.1 (Pre-Alpha)**
 - Реализация архивов: возможности `arc.list`, `arc.read`, `arc.info`
