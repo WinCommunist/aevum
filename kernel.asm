@@ -544,6 +544,12 @@ exec_cmd:
     call cmd_poweroff
     jmp .end
 .n14:
+    mov edi, tok_spawn+K
+    call strcmp
+    jnz .n15
+    call cmd_spawn
+    jmp .end
+.n15:
     mov al, [color_attr+K]
     push eax
     mov al, 0x0C
@@ -662,20 +668,141 @@ cmd_invoke:
     call puts
     ret
 
+TCB_COUNT = 16
+TCB_SIZE = 20
+TCB_PARENT = 16
+
 cmd_tasks:
     mov esi, msg_tasks_hdr+K
     call puts
-    mov edi, task_list+K
+    xor ebx, ebx
 .l:
-    mov eax, [edi]
-    or eax, eax
-    jz .d
+    cmp ebx, [task_count+K]
+    jae .d
+    mov edi, task_table+K
+    mov eax, TCB_SIZE
+    mul ebx
+    add edi, eax
+    cmp byte [edi], 0
+    je .next
+    push ebx
+    call task_depth
+    mov ecx, eax
+    jecxz .pn
+.il:
+    push ecx
+    mov esi, msg_indent+K
+    call puts
+    pop ecx
+    dec ecx
+    jnz .il
+.pn:
+    pop ebx
+    push ebx
+    mov edi, task_table+K
+    mov eax, TCB_SIZE
+    mul ebx
+    add edi, eax
+    push edi
+    mov byte [num_buf+K], '['
+    mov byte [num_buf+K+1], 0
+    mov esi, num_buf+K
+    call puts
+    mov eax, ebx
+    call itoa
+    call puts
+    mov byte [num_buf+K], ']'
+    mov byte [num_buf+K+1], ' '
+    mov byte [num_buf+K+2], 0
+    mov esi, num_buf+K
+    call puts
+    pop edi
     mov esi, edi
     call puts
     call nl
-    add edi, 16
+    pop ebx
+.next:
+    inc ebx
     jmp .l
 .d:
+    ret
+
+task_depth:
+    push edx ecx edi
+    xor ecx, ecx
+.l:
+    cmp eax, 0
+    je .d
+    mov edx, TCB_SIZE
+    mul edx
+    mov edi, task_table+K
+    add edi, eax
+    mov eax, [edi+TCB_PARENT]
+    inc ecx
+    cmp eax, 0xFFFFFFFF
+    jne .l
+.d:
+    mov eax, ecx
+    pop edi ecx edx
+    ret
+
+cmd_spawn:
+    mov esi, cmd_buf+K
+    call skip_tok
+    call skip_spc
+    lodsb
+    or al, al
+    jz .usage
+    dec esi
+    mov ecx, [task_count+K]
+    cmp ecx, TCB_COUNT
+    jae .full
+    push esi
+    mov edi, task_table+K
+    mov eax, TCB_SIZE
+    mul ecx
+    add edi, eax
+    xor edx, edx
+.ncopy:
+    lodsb
+    or al, al
+    jz .nend
+    cmp dl, 15
+    jae .nend
+    stosb
+    inc dl
+    jmp .ncopy
+.nend:
+    mov byte [edi], 0
+    inc dl
+.npad:
+    cmp dl, 16
+    jae .nset
+    mov byte [edi], 0
+    inc edi
+    inc dl
+    jmp .npad
+.nset:
+    mov eax, [current_task+K]
+    mov [edi], eax
+    inc dword [task_count+K]
+    pop esi
+    mov byte [num_buf+K], 0
+    mov esi, msg_task_ok1+K
+    call puts
+    mov eax, ecx
+    call itoa
+    call puts
+    mov esi, msg_task_ok2+K
+    call puts
+    ret
+.full:
+    mov esi, msg_task_full+K
+    call puts
+    ret
+.usage:
+    mov esi, msg_spawn_usage+K
+    call puts
     ret
 
 cmd_echo:
@@ -1524,7 +1651,7 @@ times 64 db 0
 ; --- Capability Table ---
 cap_list:
 dd cap3_name+K, sys_info_handler+K
-dd cap4_name+K, 0
+dd cap4_name+K, cmd_tasks+K
 dd cap5_name+K, arc_list_handler+K
 dd cap6_name+K, arc_read_handler+K
 dd cap7_name+K, arc_info_handler+K
@@ -1541,13 +1668,6 @@ cap7_name db "arc.info", 0
 cap8_name db "disk.list", 0
 cap9_name db "disk.info", 0
 cap10_name db "sys.install", 0
-
-; --- Task Table ---
-task_list:
-db "root        ", 0, 0, 0, 0
-db "  shell     ", 0, 0, 0, 0
-db "    invoke  ", 0, 0, 0, 0
-dd 0
 
 ; --- Strings ---
 msg_sep db "========================================", LF, 0
@@ -1573,6 +1693,7 @@ db "  info      - system info", LF
 db "  caps      - list capabilities", LF
 db "  invoke    - invoke capability", LF
 db "  tasks     - show task hierarchy", LF
+db "  spawn     - spawn a child task", LF
 db "  echo      - print text", LF
 db "  calc      - calculator", LF
 db "  clear     - clear screen", LF
@@ -1591,6 +1712,11 @@ msg_no_cap db "Capability not found", 0
 msg_inv_ok db "Capability invoked", 0
 msg_inv_usage db "Usage: invoke <name>", 0
 msg_tasks_hdr db "Task Hierarchy:", LF, 0
+msg_spawn_usage db "Usage: spawn <name>", 0
+msg_task_full db "Task table full!", 0
+msg_task_ok1 db "Task ", 0
+msg_task_ok2 db " spawned.", LF, 0
+msg_indent db "  ", 0
 msg_calc_usage db "Usage: calc <a> <op> <b>", 0
 msg_bad_op db "Bad operator. Use + - * /", 0
 msg_div0 db "Division by zero", 0
@@ -1611,6 +1737,7 @@ tok_who db "whoami", 0
 tok_halt db "halt", 0
 tok_reboot db "reboot", 0
 tok_poweroff db "poweroff", 0
+tok_spawn db "spawn", 0
 
 ; --- Archive Strings ---
 msg_arc_hdr db "Archive entries:", LF, 0
@@ -1691,5 +1818,13 @@ entry2_data:
   db "Aevum OS is released into the", LF
   db "Public Domain. Do whatever you want.", 0
 entry2_end:
+
+task_table:
+    db "root", 0
+    times 11 db 0
+    dd 0xFFFFFFFF
+    times (TCB_COUNT - 1) * TCB_SIZE db 0
+task_count dd 1
+current_task dd 0
 
 times 16384-($-$$) db 0
